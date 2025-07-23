@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Interview</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+      font-family: 'Inter', sans-serif;
+      padding-bottom: 50px;
+    }
+    .chat-box {
+      max-height: 600px;
+      overflow-y: auto;
+      padding: 1rem;
+      background: linear-gradient(145deg, #ffffff, #f8f8f8);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    .message {
+      margin: 10px 0;
+    }
+    .message.bot {
+      text-align: left;
+    }
+    .message.user {
+      text-align: right;
+    }
+    .message span {
+      display: inline-block;
+      padding: 14px 18px;
+      border-radius: 25px;
+      max-width: 75%;
+      animation: fadeIn 0.4s ease-in;
+      position: relative;
+    }
+    .message.bot span {
+      background: linear-gradient(to right, #f093fb, #f5576c);
+      color: #fff;
+    }
+    .message.user span {
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      color: white;
+    }
+    #typingIndicator {
+      font-style: italic;
+      color: #6c757d;
+      display: none;
+      margin-top: 5px;
+    }
+    .timestamp {
+      font-size: 0.75rem;
+      color: gray;
+      margin-top: 2px;
+    }
+    .form-label i {
+      margin-right: 5px;
+      color: #0d6efd;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-typing {
+      display: inline-block;
+      width: 60px;
+      height: 20px;
+    }
+    .chat-typing span {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin: 0 2px;
+      background: #adb5bd;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite ease-in-out both;
+    }
+    .chat-typing span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .chat-typing span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    .gradient-text {
+      background: linear-gradient(to right, #fc466b, #3f5efb);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: bold;
+    }
+    .chat-box::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-box::-webkit-scrollbar-thumb {
+      background-color: #d1d1d1;
+      border-radius: 4px;
+    }
+    .score-box {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #dee2e6;
+      border-radius: 12px;
+      margin-top: 4px;
+      display: inline-block;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+<div class="container mt-5">
+  <h2 class="text-center mb-4 gradient-text"><i class="bi bi-person-badge"></i> AI-Powered Interview Assistant</h2>
+  <div class="card shadow-lg border-0">
+    <div class="card-body">
+      <form id="uploadForm">
+        <div class="mb-3">
+          <label for="resume" class="form-label"><i class="bi bi-upload"></i> Upload your Resume (PDF or TXT)</label>
+          <input class="form-control" type="file" id="resume" name="resume" required>
+        </div>
+        <div class="mb-3">
+          <label for="job_title" class="form-label"><i class="bi bi-briefcase"></i> Job Title (optional)</label>
+          <input class="form-control" type="text" id="job_title" name="job_title">
+        </div>
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-play-circle"></i> Start Interview</button>
+      </form>
+
+      <div id="interviewSection" style="display:none;">
+        <div class="chat-box mt-4" id="chatBox"></div>
+        <div id="typingIndicator">
+          <div class="chat-typing">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <form id="chatForm" class="d-flex mt-3">
+          <input type="text" class="form-control me-2" id="userAnswer" placeholder="Type your answer..." required>
+          <button type="submit" class="btn btn-success"><i class="bi bi-send"></i></button>
+        </form>
+        <button id="submitBtn" class="btn btn-outline-primary mt-3 w-100" style="display:none;"><i class="bi bi-check-circle"></i> Submit Interview</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const form = document.getElementById('uploadForm');
+const chatForm = document.getElementById('chatForm');
+const chatBox = document.getElementById('chatBox');
+const interviewSection = document.getElementById('interviewSection');
+const typingIndicator = document.getElementById('typingIndicator');
+const submitBtn = document.getElementById('submitBtn');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(form);
+  const res = await fetch('/upload', { method: 'POST', body: formData });
+  const result = await res.json();
+  if (result.status === 'ok') {
+    form.style.display = 'none';
+    interviewSection.style.display = 'block';
+    await getQuestion();
+  }
+});
+
+chatForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('userAnswer');
+  const answer = input.value.trim();
+  if (!answer) return;
+  appendMessage('user', answer);
+  input.value = '';
+  typingIndicator.style.display = 'block';
+  await getQuestion(answer);
+});
+
+async function getQuestion(answer = '') {
+  const res = await fetch('/next_question', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({answer})
+  });
+  const data = await res.json();
+  typingIndicator.style.display = 'none';
+
+  if (data.evaluation) {
+    appendScore(data.evaluation);
+  }
+
+  if (data.done) {
+    appendMessage('bot', data.message);
+    if (data.summary) {
+      const sum = data.summary;
+      const summaryText = `📝 <strong>Summary Score:</strong> ${sum.avg_score}%<br>🤖 AI-like: ${sum.ai_count} | ✍️ Human-like: ${sum.human_count}`;
+      appendMessage('bot', summaryText);
+    }
+    submitBtn.style.display = 'block';
+  } else {
+    appendMessage('bot', data.question);
+  }
+}
+
+function appendMessage(sender, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message ' + sender;
+
+  const span = document.createElement('span');
+  span.innerHTML = text;
+
+  const timestamp = document.createElement('div');
+  timestamp.className = 'timestamp';
+  timestamp.textContent = new Date().toLocaleTimeString();
+
+  msgDiv.appendChild(span);
+  msgDiv.appendChild(timestamp);
+
+  chatBox.appendChild(msgDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function appendScore(evaluation) {
+  const div = document.createElement('div');
+  div.className = 'score-box';
+  const emoji = evaluation.label === 'AI-like' ? '🤖' : evaluation.label === 'Human-like' ? '✍️' : '🔀';
+  div.textContent = `${emoji} ${evaluation.label} (${evaluation.score}%)`;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+submitBtn.addEventListener('click', () => {
+  chatBox.innerHTML += `<div class="text-center text-success mt-3"><i class="bi bi-emoji-smile"></i> Interview submitted successfully. You may now close this window.</div>`;
+  chatForm.style.display = 'none';
+  submitBtn.style.display = 'none';
+});
+</script>
+</body>
+</html>
