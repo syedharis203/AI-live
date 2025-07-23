@@ -15,12 +15,12 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # --- Pinecone Setup ---
-pc = Pinecone(api_key="pcsk_dH9vJ_3JrrNAHeGANYsmWDtv6gy6nXWkCuHBRh2dRXFs7ewn31ifjDYtnWWqzHaGkGwyW")  # Replace with actual
+pc = Pinecone(api_key="pcsk_dH9vJ_3JrrNAHeGANYsmWDtv6gy6nXWkCuHBRh2dRXFs7ewn31ifjDYtnWWqzHaGkGwyW")
 index_name = "reg"
 if index_name not in pc.list_indexes().names():
     pc.create_index(
         name=index_name,
-        dimension=768,  # Corrected to match Gemini embeddings
+        dimension=768,
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
@@ -28,6 +28,7 @@ pinecone_index = pc.Index(index_name)
 
 # --- Gemini Setup ---
 genai.configure(api_key="AIzaSyCpQvZUGclZCnL18Wh0fz_mqQDT6-_CBLE")
+
 # --- Helper Functions ---
 def extract_text_from_pdf(path):
     text = ""
@@ -49,9 +50,8 @@ def ollama_chat(prompt):
 
 def embed_text(text):
     try:
-        # Corrected line: Call embed_content directly from genai
         response = genai.embed_content(
-            model="models/text-embedding-004", # Specify the model here
+            model="models/text-embedding-004",
             content=text,
             task_type="RETRIEVAL_DOCUMENT"
         )
@@ -63,7 +63,7 @@ def embed_text(text):
     except Exception as e:
         print("Embedding error:", str(e))
         return None
-    
+
 def extract_skills_with_ollama(resume_text, job_title):
     prompt = f"""
     Analyze this resume and extract the candidate's key technical skills.
@@ -106,15 +106,18 @@ def generate_question_from_skill(skill):
     context_text = "\n\n".join(context_chunks)
 
     prompt = f"""
-You're an AI interviewer. Ask a single friendly and relevant technical question based on the candidate's experience with {skill}.
+You are an AI interviewer conducting a professional technical interview.
 
-Do not introduce the skill in the question. Do not mention the candidate’s name or background. Do not include explanations or summaries.
-Use a friendly tone, like starting with 'Great!' or 'Thanks!'.
+Ask one concise, relevant, and well-structured question based on the candidate's experience with {skill}. The question should be framed in a formal and polite tone, but still feel approachable.
 
-Use this reference material for ideas:
+Do **not** mention the candidate’s name or background. Do **not** explain or summarize the skill. Do **not** include any preamble, markdown, or additional context.
+
+Start with a polite phrase like “Thank you for sharing.” or “Great, let’s continue.” to maintain a warm but professional tone.
+
+Use the following reference material to inspire your question:
 {context_text}
 
-Only return the question string. No markdown or JSON.
+Return only the question as a plain string.
     """
     return ollama_chat(prompt)
 
