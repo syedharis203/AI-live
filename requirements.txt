@@ -1,7 +1,0 @@
-flask
-gunicorn
-pdfplumber
-requests
-pinecone
-python-dotenv
-google-generativeai
